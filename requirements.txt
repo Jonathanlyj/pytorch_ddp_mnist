@@ -1,7 +1,6 @@
 torch>=1.6.0
 torchvision>=0.7.0
+mpi4py
 tqdm
 numpy
 Cython
-struct
-array

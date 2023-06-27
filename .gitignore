@@ -1,3 +1,9 @@
 mnist_data/
 .ipynb_checkpoints/
 env/*
+io_eval.py
+__pycache__/
+MNIST/
+*.nc
+*.pt
+*ubyte

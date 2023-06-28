@@ -66,38 +66,45 @@ def main(epochs: int,
         model.train()
         epoch_loss = 0
         # train the model for one epoch
-
-        for idx, (x, y) in enumerate(train_loader):
+        pbar = tqdm(train_loader)
+        for x, y in pbar:
             x = x.view(x.shape[0], -1)
-            # optimizer.zero_grad()
-            # y_hat = model(x)
-            # batch_loss = loss(y_hat, y)
-            # batch_loss.backward()
-            # optimizer.step()
-            # batch_loss_scalar = batch_loss.item()
-            # epoch_loss += batch_loss_scalar / x.shape[0]
-            if idx % 500 == 0:
-                print(x[0])
-                print(y)
-           
+            optimizer.zero_grad()
+            y_hat = model(x)
+            batch_loss = loss(y_hat, y)
+            batch_loss.backward()
+            optimizer.step()
+            batch_loss_scalar = batch_loss.item()
+            epoch_loss += batch_loss_scalar / x.shape[0]
+            pbar.set_description(f'training batch_loss={batch_loss_scalar:.4f}')
 
         # calculate validation loss
         with torch.no_grad():
             model.eval()
             val_loss = 0
-            for idx, (x, y) in enumerate(test_loader):
-                if idx % 500 == 0:
-                    print(x[0])
-                    print(y)
+            pbar = tqdm(test_loader)
+            for x, y in pbar:
+                x = x.view(x.shape[0], -1)
+                y_hat = model(x)
+                batch_loss = loss(y_hat, y)
+                batch_loss_scalar = batch_loss.item()
 
-    return 
+                val_loss += batch_loss_scalar / x.shape[0]
+                pbar.set_description(f'validation batch_loss={batch_loss_scalar:.4f}')
+
+        print(f"Epoch={i}, train_loss={epoch_loss:.4f}, val_loss={val_loss:.4f}")
+
+    return model
 
 
 if __name__ == '__main__':
     batch_size = 128
     epochs = 1
+
     train_loader, test_loader = create_data_loaders(batch_size)
-    main(epochs=epochs,
-                model=create_model(),
-                train_loader=train_loader,
-                test_loader=test_loader)
+    model = main(epochs=epochs,
+                 model=create_model(),
+                 train_loader=train_loader,
+                 test_loader=test_loader)
+
+    torch.save(model.state_dict(), 'model.pt')

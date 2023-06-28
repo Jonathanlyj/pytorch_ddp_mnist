@@ -80,26 +80,41 @@ def main(epochs: int,
          model: nn.Module,
          train_loader: DataLoader,
          test_loader: DataLoader):
-
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    loss = nn.CrossEntropyLoss()
     # train the model
     for i in range(epochs):
         model.train()
         epoch_loss = 0
         # train the model for one epoch
-        for index, (x, y) in enumerate(train_loader):
-            if index % 1000 == 0:
-                print(x[0])
-    return 
+        pbar = tqdm(train_loader)
+        for x, y in pbar:
+            x = x.view(x.shape[0], -1)
+            optimizer.zero_grad()
+            y_hat = model(x)
+            batch_loss = loss(y_hat, y)
+            batch_loss.backward()
+            optimizer.step()
+            batch_loss_scalar = batch_loss.item()
+            epoch_loss += batch_loss_scalar / x.shape[0]
+            pbar.set_description(f'training batch_loss={batch_loss_scalar:.4f}')
 
+        # calculate validation loss
+        with torch.no_grad():
+            model.eval()
+            val_loss = 0
+            pbar = tqdm(test_loader)
+            for x, y in pbar:
+                x = x.view(x.shape[0], -1)
+                y_hat = model(x)
+                batch_loss = loss(y_hat, y)
+                batch_loss_scalar = batch_loss.item()
 
+                val_loss += batch_loss_scalar / x.shape[0]
+                pbar.set_description(f'validation batch_loss={batch_loss_scalar:.4f}')
 
-#     batch_size = 128
-#     epochs = 1
-#     train_loader, test_loader = create_data_loaders(batch_size, 1)
-#     main(epochs=epochs,
-#          model=create_model(),
-#          train_loader=train_loader,
-#          test_loader=test_loader)
+        print(f"Epoch={i}, train_loss={epoch_loss:.4f}, val_loss={val_loss:.4f}")
+
 if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     batch_size = 128

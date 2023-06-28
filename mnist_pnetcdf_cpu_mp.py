@@ -29,6 +29,7 @@ class MNISTNetCDF(Dataset):
         print ('=> Reading NetCDF File...')
         nc_path = os.path.join(root_dir,'mnist_{}_images.nc'.format('train' if is_train else 'test'))
         self.nc = pncpy.File(nc_path,'r', comm = comm)
+        self.nc.begin_indep()
         
         print('=> Dataset created, image nc file is : {}'.format(nc_path))
         
@@ -42,7 +43,7 @@ class MNISTNetCDF(Dataset):
         image = np.array(self.nc.variables['images'][index])
         # fetch and encode label
         buff = np.empty((), np.uint8)
-        self.nc.variables['labels'].get_var_all(buff, index = (index,))
+        self.nc.variables['labels'].get_var(buff, index = (index,))
         if self.transforms:
             image = self.transforms(image)
         return image,buff

@@ -180,6 +180,35 @@ class distributed():
     
             # Initialize DDP module
             dist.init_process_group(backend = "nccl", init_method='env://')
+        
+        elif method ==  "mpich":
+            if "MASTER_ADDR" not in os.environ:
+                os.environ['MASTER_ADDR'] = "localhost"
+    
+            # Use the default pytorch port
+            if "MASTER_PORT" not in os.environ:
+                os.environ["MASTER_PORT"] = "29500"
+    
+            if "WORLD_SIZE" not in os.environ:
+                if "PMI_SIZE" in os.environ:
+                    world_size = os.environ["PMI_SIZE"]
+                elif MPI.Is_initialized():
+                    world_size = MPI.COMM_WORLD.Get_size()
+                else:
+                    world_size = 1
+                os.environ["WORLD_SIZE"] = str(world_size)
+    
+            if "RANK" not in os.environ:
+                if "PMI_RANK" in os.environ:
+                    rank = os.environ["PMI_RANK"]
+                elif MPI.Is_initialized():
+                    rank = MPI.COMM_WORLD.Get_rank()
+                else:
+                    rank = 0
+                os.environ["RANK"] = str(rank)
+    
+            # Initialize DDP module
+            dist.init_process_group(backend = "mpi", init_method='env://')
     
         elif method == "gloo":
             if "MASTER_ADDR" not in os.environ:
@@ -247,7 +276,7 @@ def configure():
     parser = argparse.ArgumentParser(description="Evaluate cost of reading input files")
     add_arg = parser.add_argument
     add_arg("--wireup_method", type=str, default="nccl-slurm",
-        choices=["nccl-slurm", "nccl-openmpi", "nccl-mpich", "gloo"],
+        choices=["nccl-slurm", "nccl-openmpi", "nccl-mpich", "gloo", "mpich"],
         help="Choose backend for distributed environment initialization")
     add_arg("--data_path",   type=str, default=None, help="File path to training samples")
     add_arg("--data_limit",  type=int, default=None, help="Max number of samples to be used")
@@ -465,18 +494,13 @@ if __name__ == '__main__':
 
     # initialize parallel environment
     comm = init_parallel(config)
-
-
     rank = config["trainer"]["rank"] 
 
-
-
-
-
-    # torch.cuda.set_device(rank)
+    # torch.cuda.service(rank)
     # torch.distributed.init_process_group(backend=Backend.NCCL,
     #                                      init_method='env://')
 
+    # mpi_comm = torch.distributed.distributed_c10d._get_default_group().nccl_comm
     train_loader, test_loader = create_data_loaders(config, mpi_comm)
     model = main(model=create_model(),
                  train_loader=train_loader,
